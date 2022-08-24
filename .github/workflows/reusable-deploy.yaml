@@ -170,7 +170,7 @@ jobs:
 
       - name: Create Artifact Repository
         if: ${{ env.REPO_EXISTS == '' }} 
-        run: gcloud --project=${{ env.PROJECT_ID }} artifacts repositories create ${{ env.SERVICE }} --location=${{ env.GAR_LOCATION }} --repository-format=docker
+        run: gcloud --project=${{ env.PROJECT_ID }} --quiet artifacts repositories create ${{ env.SERVICE }} --location=${{ env.GAR_LOCATION }} --repository-format=docker
 
       # - name: Build Container
       #   run: |-
