@@ -109,32 +109,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      # - name: Google Auth
-      #   id: auth
-      #   uses: 'google-github-actions/auth@v0'
-      #   with:
-      #     token_format: 'access_token'
-      #     workload_identity_provider: '${{ secrets.WIF_PROVIDER }}' # e.g. - projects/123456789/locations/global/workloadIdentityPools/my-pool/providers/my-provider
-      #     service_account: '${{ secrets.WIF_SERVICE_ACCOUNT }}' # e.g. - my-service-account@my-project.iam.gserviceaccount.com
-
-      # NOTE: Alternative option - authentication via credentials json
-      - name: Google Auth
-        id: auth
-        uses: 'google-github-actions/auth@v0'
-        with:
-          credentials_json: "${{ secrets.GAR_JSON_KEY }}"
-
-      # BEGIN - Docker auth and build (NOTE: If you already have a container image, these Docker steps can be omitted)
-
-      # Authenticate Docker to Google Cloud Artifact Registry
-      - name: Docker Auth
-        id: docker-auth
-        uses: 'docker/login-action@v2'
-        with:
-          username: '_json_key'
-          password: '${{ secrets.GAR_JSON_KEY }}'
-          registry: '${{ env.GAR_LOCATION }}-docker.pkg.dev'
-
       # could be summarized with env and contains
       - name: Extract branch name
         run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
@@ -143,7 +117,7 @@ jobs:
       - name: Current Branch Env
         run: echo "CURRENT_BRANCH=${{ steps.extract_branch.outputs.branch }}" >> $GITHUB_ENV
 
-      # Batch Routing
+      # Branch Routing
       - name: Branch Routing Dev
         if: ${{ contains(env.CURRENT_BRANCH, env._BRANCH_NAME_DEV) }}
         run: |
@@ -162,6 +136,60 @@ jobs:
       - name: Branch Routing Finalize
         run: echo "SERVICE="${{ env._SERVICE_BASE }}${{ env._SERVICE_APX }}"" >> $GITHUB_ENV
 
+
+      # NOTE: Alternative option - authentication via credentials json
+      - name: Google Auth Dev
+        id: auth_dev
+        if: ${{ !contains(env.CURRENT_BRANCH, env._BRANCH_NAME_PROD) }}
+        # with:
+        #   credentials_json: "${{ secrets.GAR_JSON_KEY_DEV }}"
+        uses: 'google-github-actions/auth@v0.4.0'
+        with:
+          token_format: 'access_token'
+          workload_identity_provider: '${{ secrets.WIF_PROVIDER_DEV }}'
+          service_account: '${{ secrets.WIF_SERVICE_ACCOUNT_DEV }}'
+      - name: Google Auth Prod
+        id: auth_prod
+        if: ${{ contains(env.CURRENT_BRANCH, env._BRANCH_NAME_PROD) }}
+        # with:
+        #   credentials_json: "${{ secrets.GAR_JSON_KEY_PROD }}"
+        uses: 'google-github-actions/auth@v0.4.0'
+        with:
+          token_format: 'access_token'
+          workload_identity_provider: '${{ secrets.WIF_PROVIDER_PROD }}'
+          service_account: '${{ secrets.WIF_SERVICE_ACCOUNT_PROD }}'
+
+
+
+
+
+      # BEGIN - Docker auth and build (NOTE: If you already have a container image, these Docker steps can be omitted)
+
+      # Authenticate Docker to Google Cloud Artifact Registry
+      - name: Docker Auth Dev
+        id: docker-auth_dev
+        if: ${{ !contains(env.CURRENT_BRANCH, env._BRANCH_NAME_PROD) }}
+        uses: 'docker/login-action@v2'
+        with:
+          # username: '_json_key'
+          # password: '${{ secrets.GAR_JSON_KEY }}'
+          # registry: '${{ env.GAR_LOCATION }}-docker.pkg.dev'
+          username: 'oauth2accesstoken'
+          password: '${{ steps.auth_dev.outputs.access_token }}'
+          registry: '${{ env.GAR_LOCATION }}-docker.pkg.dev'
+      - name: Docker Auth Prod
+        id: docker-auth_prod
+        if: ${{ contains(env.CURRENT_BRANCH, env._BRANCH_NAME_PROD) }}
+        uses: 'docker/login-action@v2'
+        with:
+          # username: '_json_key'
+          # password: '${{ secrets.GAR_JSON_KEY }}'
+          # registry: '${{ env.GAR_LOCATION }}-docker.pkg.dev'
+          username: 'oauth2accesstoken'
+          password: '${{ steps.auth_prod.outputs.access_token }}'
+          registry: '${{ env.GAR_LOCATION }}-docker.pkg.dev'
+
+
       - name: Set Image Name
         run: echo "IMAGE_NAME="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/image-${{ env.SERVICE }}:${{ github.sha }}"" >> $GITHUB_ENV
 
@@ -172,13 +200,7 @@ jobs:
         if: ${{ env.REPO_EXISTS == '' }} 
         run: gcloud --project=${{ env.PROJECT_ID }} --quiet artifacts repositories create ${{ env.SERVICE }} --location=${{ env.GAR_LOCATION }} --repository-format=docker
 
-      # - name: Build Container
-      #   run: |-
-      #     docker build --build-arg GITHUB_TOKEN=${{ secrets.SOCIALIZE_PACKAGE_PAT }} --build-arg GITHUB_USERNAME=${{ github.actor }} -t ${{ env.IMAGE_NAME }} ./
 
-      # - name: Push Container
-      #   run: |-
-      #     docker push ${{ env.IMAGE_NAME }}
 
       - name: Build and Push Container
         uses: docker/build-push-action@v3
