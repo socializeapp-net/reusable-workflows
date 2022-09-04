@@ -60,7 +60,7 @@ on:
         required: false
         description: The name of the subproject to deploy from
         type: string
-        default: ""
+        default: "."
       cloud_run_flags:
         # https://cloud.google.com/sdk/gcloud/reference/run/deploy#FLAGS
         required: false
