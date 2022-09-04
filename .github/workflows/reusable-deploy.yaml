@@ -219,7 +219,7 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_NAME }}
           build-args: |
-            "SUBPROJ"=${{ inputs.subproject_name }}
+            "SUBPROJ=${{ inputs.subproject_name }}"
             "GITHUB_TOKEN=${{ secrets.SOCIALIZE_PACKAGE_PAT }}"
             "GITHUB_USERNAME=${{ github.actor }}"
           # secrets: |
