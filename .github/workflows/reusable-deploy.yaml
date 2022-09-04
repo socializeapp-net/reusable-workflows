@@ -51,6 +51,16 @@ on:
         required: true
         description: The name of the service to deploy to
         type: string
+      dockerfile:
+        required: false
+        description: The path to the Dockerfile
+        type: string
+        default: ./Dockerfile
+      subproject_name:
+        required: false
+        description: The name of the subproject to deploy from
+        type: string
+        default: ""
       cloud_run_flags:
         # https://cloud.google.com/sdk/gcloud/reference/run/deploy#FLAGS
         required: false
@@ -205,9 +215,11 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./
+          file: ${{ inputs.dockerfile }}
           push: true
           tags: ${{ env.IMAGE_NAME }}
           build-args: |
+            "SUBPROJ"=${{ inputs.subproject_name }}
             "GITHUB_TOKEN=${{ secrets.SOCIALIZE_PACKAGE_PAT }}"
             "GITHUB_USERNAME=${{ github.actor }}"
           # secrets: |
