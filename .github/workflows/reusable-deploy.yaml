@@ -71,7 +71,7 @@ on:
       cloud_run_secrets_mappings:
         # https://github.com/google-github-actions/deploy-cloudrun
         required: false
-        description: The secrets to pass to the Cloud Run Instance. They can be used in in runtime. Syntax is DESIRED_ENV_NAME=SECRET_NAME_IN_GCP
+        description: The secrets to pass to the Cloud Run Instance. They can be used in in runtime. Syntax is DESIRED_ENV_NAME=SECRET_NAME_IN_GCP:latest
         type: string
         default: ''
 
@@ -244,7 +244,7 @@ jobs:
           region: ${{ env.REGION }}
           # NOTE: If using a pre-built image, update the image name here
           image: ${{ env.IMAGE_NAME }}
-          flags: ${{ inputs.cloud_run_flags }}
+          flags: "${{ inputs.cloud_run_flags }} --service-account=cloud-run-runtime@${{ env.PROJECT_ID }}.iam.gserviceaccount.com"
           secrets: "${{ inputs.cloud_run_secrets_mappings }}"
 
       # If required, use the Cloud Run url output in later steps
